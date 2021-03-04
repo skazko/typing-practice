@@ -20,7 +20,7 @@ export default function Dashboard(_: RouteComponentProps) {
   }
 
   if (currentUser instanceof Client) {
-    return <Account />
+    return <Account user={currentUser} />
   }
 
   const columns = [
