@@ -8,10 +8,20 @@ import useCurrentUser from "../../hooks/use-current-user";
 import { Table, Breadcrumb } from "antd";
 import type { User } from "../../entities/user";
 import type { RouteComponentProps } from "@reach/router";
+import { Client } from "../../entities/client";
+import Account from "../account";
 
 export default function Dashboard(_: RouteComponentProps) {
   const currentUser = useCurrentUser();
   const [users, onUserUpdates] = useUsers();
+
+  if (currentUser === null) {
+    return null;
+  }
+
+  if (currentUser instanceof Client) {
+    return <Account />
+  }
 
   const columns = [
     {
@@ -31,6 +41,7 @@ export default function Dashboard(_: RouteComponentProps) {
       key: "action",
       render: (_: undefined, user: User) => (
         <Actions
+          currentUser={currentUser}
           user={user}
           onAction={(action) => onUserUpdates(user, action)}
         />

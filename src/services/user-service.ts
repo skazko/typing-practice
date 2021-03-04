@@ -10,15 +10,19 @@ export default class UserService {
   private users: readonly User[] = [];
 
   async getAllUsers(): Promise<readonly User[]> {
-    if (this.users.length !== 0) {
-      return this.users;
+    if (this.users.length === 0) {
+      await this.fetchUsers();
     }
+    
+    return this.users;
+  }
+
+  private async fetchUsers(): Promise<void> {
     const response = await this.fetch();
     this.users = response.default.map((u: any) => {
       const User = this.getConstructorByRole(u.role);
       return User.from(u);
     });
-    return this.users;
   }
 
   private fetch(): Promise<any> {
@@ -35,13 +39,23 @@ export default class UserService {
   }
 
   getAvailableOperations(user: User, currenUser: User): Operation[] {
-    // Вам нужно поменять логику внутри getAvailableOperations для того, что бы это работало с логином
-    throw new Error("Not Implemented")
-    // if (user instanceof Admin || user instanceof Client) {
-    //   return [Operation.UPDATE_TO_MODERATOR];
-    // }
+    if (currenUser instanceof Admin) {
+      if (user instanceof Admin || user instanceof Client) {
+        return [Operation.UPDATE_TO_MODERATOR];
+      }
+      return [Operation.UPDATE_TO_CLIENT, Operation.UPDATE_TO_ADMIN];
+    }
 
-    // return [Operation.UPDATE_TO_CLIENT, Operation.UPDATE_TO_ADMIN];
+    if (currenUser instanceof Moderator) {
+      if (user instanceof Client) {
+        return [Operation.UPDATE_TO_MODERATOR];
+      }
+      if (user instanceof Moderator) {
+        return [Operation.UPDATE_TO_CLIENT];
+      }
+    }
+
+    return []
   }
 
   getConstructorByRole(role: Role) {
@@ -53,5 +67,12 @@ export default class UserService {
       case Role.MODERATOR:
         return Moderator;
     }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (this.users.length === 0) {
+      await this.fetchUsers();
+    }
+    return this.users.find(u => (u.email === email));
   }
 }
