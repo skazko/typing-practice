@@ -5,9 +5,23 @@ import { Moderator } from "../entities/moderator";
 import { Operation } from "../entities/operation";
 import type { User } from "../entities/user";
 import type { RoleToUser } from "../entities/role-to-user";
+import type { DashboardUser } from "../entities/dashboard-user";
+import or from "../utils/or";
 
 export default class UserService {
   private users: readonly User[] = [];
+  private readonly operationsForAdminBy = {
+    [Role.ADMIN]: [Operation.UPDATE_TO_MODERATOR],
+    [Role.MODERATOR]: [],
+  };
+  private readonly operationsForModeratorBy = {
+    [Role.ADMIN]: [Operation.UPDATE_TO_ADMIN, Operation.UPDATE_TO_CLIENT],
+    [Role.MODERATOR]: [Operation.UPDATE_TO_CLIENT],
+  };
+  private readonly operationForClientBy = {
+    [Role.ADMIN]: [Operation.UPDATE_TO_MODERATOR],
+    [Role.MODERATOR]: [Operation.UPDATE_TO_MODERATOR],
+  };
 
   async getAllUsers(): Promise<readonly User[]> {
     if (this.users.length === 0) {
@@ -29,33 +43,24 @@ export default class UserService {
     return import("../mocks/users.json");
   }
 
-  async updateUserRole<R extends Role>(
-    user: Readonly<RoleToUser[R]>,
-    newRole: R
-  ) {
+  async updateUserRole<R extends Role>(user: Readonly<RoleToUser[R]>, newRole: R) {
     const User = this.getConstructorByRole(newRole);
     this.users = this.users.map((u) => (u.id === user.id ? User.from(u) : u));
     return this.users;
   }
 
-  getAvailableOperations(user: User, currenUser: User): Operation[] {
-    if (currenUser instanceof Admin) {
-      if (user instanceof Admin || user instanceof Client) {
-        return [Operation.UPDATE_TO_MODERATOR];
-      }
-      return [Operation.UPDATE_TO_CLIENT, Operation.UPDATE_TO_ADMIN];
+  getAvailableOperations(user: User, currenUser: User) {
+    const dashboardUser = or(Admin, Moderator);
+
+    if (this.isOperationsForAdmin(user)) {
+      return this.getOperationsForAdmin(dashboardUser(currenUser));
     }
 
-    if (currenUser instanceof Moderator) {
-      if (user instanceof Client) {
-        return [Operation.UPDATE_TO_MODERATOR];
-      }
-      if (user instanceof Moderator) {
-        return [Operation.UPDATE_TO_CLIENT];
-      }
+    if (this.isOperationsForModerator(user)) {
+      return this.getOperationsForModerator(dashboardUser(currenUser));
     }
 
-    return []
+    return this.getOperationsForClient(dashboardUser(currenUser));
   }
 
   getConstructorByRole(role: Role) {
@@ -69,10 +74,34 @@ export default class UserService {
     }
   }
 
+  isOperationsForAdmin(user: User): user is Admin {
+    return user instanceof Admin;
+  }
+
+  isOperationsForModerator(user: User): user is Moderator {
+    return user instanceof Moderator;
+  }
+
+  isOperationsForClient(user: User): user is Client {
+    return user instanceof Client;
+  }
+
+  getOperationsForAdmin(loggedInUser: DashboardUser) {
+    return this.operationsForAdminBy[loggedInUser.role];
+  }
+
+  getOperationsForModerator(loggedInUser: DashboardUser) {
+    return this.operationsForModeratorBy[loggedInUser.role];
+  }
+
+  getOperationsForClient(loggedInUser: DashboardUser) {
+    return this.operationForClientBy[loggedInUser.role];
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     if (this.users.length === 0) {
       await this.fetchUsers();
     }
-    return this.users.find(u => (u.email === email));
+    return this.users.find((u) => u.email === email);
   }
 }
