@@ -26,7 +26,7 @@ export default function Actions({ user, currentUser, onAction }: ActionsProps) {
     </Menu>
   );
   return (
-    <Dropdown overlay={menu} trigger={["click"]}>
+    <Dropdown disabled={operations.length === 0} overlay={menu} trigger={["click"]}>
       <a className="ant-dropdown-link" onClick={(e) => e.preventDefault()}>
         Action <DownOutlined />
       </a>
