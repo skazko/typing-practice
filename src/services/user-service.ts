@@ -2,32 +2,18 @@ import { Role } from "../entities/role";
 import { Admin } from "../entities/admin";
 import { Client } from "../entities/client";
 import { Moderator } from "../entities/moderator";
-import { Operation } from "../entities/operation";
 import type { User } from "../entities/user";
 import type { RoleToUser } from "../entities/role-to-user";
-import type { DashboardUser } from "../entities/dashboard-user";
-import or from "../utils/or";
+import { AVAILABLE_OPERATIONS } from "../entities/available-operations";
 
 export default class UserService {
   private users: readonly User[] = [];
-  private readonly operationsForAdminBy = {
-    [Role.ADMIN]: [Operation.UPDATE_TO_MODERATOR],
-    [Role.MODERATOR]: [],
-  };
-  private readonly operationsForModeratorBy = {
-    [Role.ADMIN]: [Operation.UPDATE_TO_ADMIN, Operation.UPDATE_TO_CLIENT],
-    [Role.MODERATOR]: [Operation.UPDATE_TO_CLIENT],
-  };
-  private readonly operationForClientBy = {
-    [Role.ADMIN]: [Operation.UPDATE_TO_MODERATOR],
-    [Role.MODERATOR]: [Operation.UPDATE_TO_MODERATOR],
-  };
 
   async getAllUsers(): Promise<readonly User[]> {
     if (this.users.length === 0) {
       await this.fetchUsers();
     }
-    
+
     return this.users;
   }
 
@@ -49,18 +35,13 @@ export default class UserService {
     return this.users;
   }
 
-  getAvailableOperations(user: User, currenUser: User) {
-    const dashboardUser = or(Admin, Moderator);
-
-    if (this.isOperationsForAdmin(user)) {
-      return this.getOperationsForAdmin(dashboardUser(currenUser));
-    }
-
-    if (this.isOperationsForModerator(user)) {
-      return this.getOperationsForModerator(dashboardUser(currenUser));
-    }
-
-    return this.getOperationsForClient(dashboardUser(currenUser));
+  getAvailableOperations<
+    R1 extends Role,
+    U1 extends User & { role: R1 },
+    R2 extends Role,
+    U2 extends User & { role: R2 }
+  >(user: U1, currenUser: U2): typeof AVAILABLE_OPERATIONS[R1][R2] {
+    return AVAILABLE_OPERATIONS[user.role][currenUser.role];
   }
 
   getConstructorByRole(role: Role) {
@@ -72,30 +53,6 @@ export default class UserService {
       case Role.MODERATOR:
         return Moderator;
     }
-  }
-
-  isOperationsForAdmin(user: User): user is Admin {
-    return user instanceof Admin;
-  }
-
-  isOperationsForModerator(user: User): user is Moderator {
-    return user instanceof Moderator;
-  }
-
-  isOperationsForClient(user: User): user is Client {
-    return user instanceof Client;
-  }
-
-  getOperationsForAdmin(loggedInUser: DashboardUser) {
-    return this.operationsForAdminBy[loggedInUser.role];
-  }
-
-  getOperationsForModerator(loggedInUser: DashboardUser) {
-    return this.operationsForModeratorBy[loggedInUser.role];
-  }
-
-  getOperationsForClient(loggedInUser: DashboardUser) {
-    return this.operationForClientBy[loggedInUser.role];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
