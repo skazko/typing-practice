@@ -19,7 +19,7 @@ export default function Dashboard(_: RouteComponentProps) {
     return null;
   }
 
-  if (currentUser instanceof Client) {
+  if (Client.guard(currentUser)) {
     return <Account user={currentUser} />
   }
 

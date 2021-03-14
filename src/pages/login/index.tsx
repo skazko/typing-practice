@@ -3,11 +3,11 @@ import useLogin from "../../hooks/use-login";
 import { useState } from "react";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { Card, Form, Input, Button, Layout, Typography } from "antd";
-import type { MaybeCredentials } from "../../entities/credentials";
+import { Credentials } from "../../entities/credentials";
 import type { RouteComponentProps } from "@reach/router";
 
 export default function Login(_: RouteComponentProps) {
-  const [credentials, setCredentials] = useState<MaybeCredentials | null>(null);
+  const [credentials, setCredentials] = useState<Credentials | null>(null);
 
   useLogin(credentials);
 
